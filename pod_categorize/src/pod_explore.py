@@ -10,7 +10,12 @@ import re
 import nltk
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
+#import argparse
+#import UMLSService
 
+#parser = argparse.ArgumentParser(description='Explore contents of a Project Open Data inventory file')
+#parser.add_argument("-k", "--apikey", required = True, dest = "apikey", help = "the API key from a UTS account")
+#args = parser.parse_args()
 
 pod_url = 'https://www.hhs.gov/data.json'
 pod = pd.read_json(pod_url)
@@ -73,7 +78,7 @@ def split_terms(s: str) -> list:
 # This corrects keyword lists that are incorrectly formatted as a 
 # single string with distinct terms separated by double spaces.
 # It replaces multiple "-" or "_" characters with spaces.
-def clean_keywords(s: pd.core.series.Series) -> list:
+def clean_keywords(s: pd.Series) -> list:
     keyword_list = []
     for kl in s['keyword']:
         keyword_list.extend(split_terms(kl))
@@ -81,7 +86,7 @@ def clean_keywords(s: pd.core.series.Series) -> list:
         
 dataset_metadata['clean_keywords'] = dataset_metadata.apply(clean_keywords, axis=1)
 
-def get_description_content(s: pd.core.series.Series) -> str:
+def get_description_content(s: pd.Series) -> str:
     desc = s['description']
     # Stip any HTML tags out of the description text.
     parsed_desc = BeautifulSoup(desc,'html.parser')
@@ -90,46 +95,64 @@ def get_description_content(s: pd.core.series.Series) -> str:
     
 dataset_metadata['clean_description'] = dataset_metadata.apply(get_description_content, axis=1)
 
+def tokenize_text(s: pd.Series) -> []:
+    tokens = nltk.word_tokenize(s['clean_description'])
+    tokens.extend(s['clean_keywords'])
+    return tokens
+
+dataset_metadata['full_text_tokens'] = dataset_metadata.apply(tokenize_text, axis=1)
+
+def remove_stop_words(s: pd.Series) -> pd.Series:
+    sig_tokens = [word for word in s['full_text_tokens'] if word not in nltk.corpus.stopwords.words('english')]
+    return sig_tokens
+    
+# Remove the stop words from the tokens into a separate list for processing.
+dataset_metadata['significant_text_tokens'] = dataset_metadata.apply(remove_stop_words, axis=1)
+
 # Extracts the first part of the publisher name (up to the first comma) and
 # decodes HTML escaped ampersands.
-def extract_publishers(s: pd.core.series.Series) -> str:
+def extract_publishers(s: pd.Series) -> str:
     return s['publisher']['name'].split(',')[0].replace('amp;','')
     
 dataset_metadata['publisher_name'] = dataset_metadata.apply(extract_publishers, axis=1)    
 
-# Plot a historgam of the publishers.
+# Plot a histogram of the publishers.
 dataset_publisher_counts = dataset_metadata['publisher_name'].value_counts()
 dataset_publisher_counts.plot(kind='barh')
 
 # Collect the keyword and description length for each dataset.
-def calculate_keyword_count(s: pd.core.series.Series) -> {}:
-    return len(s['clean_keywords'])
-    
-def calculate_keyword_characters(s: pd.core.series.Series) -> {}:
-    return pd.Series((len(k) for k in s['clean_keywords'])).sum()
+#def calculate_keyword_count(s: pd.Series) -> {}:
+#    return len(s['clean_keywords'])
+#    
+#def calculate_keyword_characters(s: pd.Series) -> {}:
+#    return pd.Series((len(k) for k in s['clean_keywords'])).sum()
+#
+#def calculate_description_word_count(s: pd.Series) -> {}:
+#    return len(nltk.word_tokenize(s['clean_description']))
+#
+#def calculate_description_characters(s: pd.Series) -> {}:
+#    return len(s['clean_description'])
+#
+#dataset_metadata['keyword_count'] = dataset_metadata.apply(calculate_keyword_count, axis=1)
+#dataset_metadata['keyword_characters'] = dataset_metadata.apply(calculate_keyword_characters, axis=1)
+#dataset_metadata['description_word_count'] = dataset_metadata.apply(calculate_description_word_count, axis=1)
+#dataset_metadata['description_characters'] = dataset_metadata.apply(calculate_description_characters, axis=1)
+#
+#dataset_metadata_by_publisher = dataset_metadata.groupby('publisher_name')
+#
+#for p,ilist in dataset_metadata_by_publisher:
+#    fig = plt.figure()
+#    diag = fig.add_subplot(1,1,1)
+#    ilist.hist(column='keyword_characters', ax=diag)
+#    diag.set_title(p + ' keyword character count')
+#    fig.show()
+#    fig2 = plt.figure()
+#    diag2 = fig2.add_subplot(1,1,1)
+#    ilist.hist(column='description_characters', ax=diag2)
+#    diag2.set_title(p + ' description character count')
+#    fig2.show()
 
-def calculate_description_word_count(s: pd.core.series.Series) -> {}:
-    return len(nltk.word_tokenize(s['clean_description']))
-
-def calculate_description_characters(s: pd.core.series.Series) -> {}:
-    return len(s['clean_description'])
-
-dataset_metadata['keyword_count'] = dataset_metadata.apply(calculate_keyword_count, axis=1)
-dataset_metadata['keyword_characters'] = dataset_metadata.apply(calculate_keyword_characters, axis=1)
-dataset_metadata['description_word_count'] = dataset_metadata.apply(calculate_description_word_count, axis=1)
-dataset_metadata['description_characters'] = dataset_metadata.apply(calculate_description_characters, axis=1)
-
-dataset_metadata_by_publisher = dataset_metadata.groupby('publisher_name')
-
-for p,ilist in dataset_metadata_by_publisher:
-    fig = plt.figure()
-    diag = fig.add_subplot(1,1,1)
-    ilist.hist(column='keyword_characters', ax=diag)
-    diag.set_title(p + ' keyword character count')
-    fig.show()
-    fig2 = plt.figure()
-    diag2 = fig2.add_subplot(1,1,1)
-    ilist.hist(column='description_characters', ax=diag2)
-    diag2.set_title(p + ' description character count')
-    fig2.show()
-
+#uts = UMLSService(args.apikey)
+#apikey = input('Enter the API key to use UMLS Terminology Service: ')
+#uts = UMLSService(apikey)
+#print(uts.search(dataset_metadata.iloc[0]['tokenized_keywords'][0]))
