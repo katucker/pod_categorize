@@ -9,9 +9,8 @@ import pandas as pd
 import re
 import nltk
 from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
-#import argparse
-#import UMLSService
+#import matplotlib.pyplot as plt
+import subprocess
 
 #parser = argparse.ArgumentParser(description='Explore contents of a Project Open Data inventory file')
 #parser.add_argument("-k", "--apikey", required = True, dest = "apikey", help = "the API key from a UTS account")
@@ -116,9 +115,61 @@ def extract_publishers(s: pd.Series) -> str:
     
 dataset_metadata['publisher_name'] = dataset_metadata.apply(extract_publishers, axis=1)    
 
+def get_metamap_concepts(text: str, use_disambiguation = True, identify_terms = False) -> []:
+    # Path to the MetaMap application.
+    mm = "/Users/ktucker/Documents/DevOps/public_mm/bin/metamap"
+    # The parameter list to use for executing the MetaMap application.
+    mmp = [mm, "-N"]
+    if use_disambiguation:
+        mmp.append("-y")
+    if identify_terms:
+        mmp.append("-z")
+    mmproc = subprocess.Popen(mmp, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        mmout, mmerr = mmproc.communicate(input=text.encode(), timeout=120)
+    except subprocess.TimeoutExpired:
+        mmproc.kill()
+        mmout, mmerr = mmproc.communicate()
+    clist = mmout.decode().split("\n")
+    # Discard the first line of output, which contains runtime parameters.
+    # Discard the last line of output, since it is a blank after splitting.
+    clist = clist[1:-1]
+    return clist
+
+def identify_description_concepts(s: pd.Series) -> []:
+    """Identify concepts in the Unified Medical Language System found within description field of the passed Series object.
+    """
+    return get_metamap_concepts(s['description'])
+
+def identify_homepage_concepts(s: pd.Series) -> []:
+    """Identify concepts in the Unified Medical Language System found within the homepage text for the passed Series object.
+    """
+    return get_metamap_concepts(s['homepage_text'])
+
+def identify_keyword_concepts(s: pd.Series) -> []:
+    """Identify the concepts in the Unified Medical Language System within the keywords for the passed Series object.
+    """
+    return get_metamap_concepts(s['keywords'].join("\n"), identify_terms=True)
+
+dataset_metadata['description_umls_concepts'] = dataset_metadata.apply(identify_description_concepts, axis=1)
+
+def retrieve_dkan_dataset_urls(s: str) -> []:
+    """Retrieves the URLS from the metadata for a dataset through the DKAN API.
+    """
+    dkan_metadata_url = "https://www.healthdata.gov/api/3/action/package_show?id="+s
+    dkan_metadata = pd.read_json(dkan_metadata_url)
+    dkan_api_results = dkan_metadata['result'].apply(pd.Series)
+    dkan_urls = list(dkan_api_results['url'])
+    return dkan_urls
+
+def retrieve_dkan_urls(s: pd.Series) -> []:
+    return retrieve_dkan_dataset_urls(s['identifier'])
+
+dataset_metadata['dkan_metadata'] = dataset_metadata.apply(retrieve_dkan_urls, axis=1)
+
 # Plot a histogram of the publishers.
-dataset_publisher_counts = dataset_metadata['publisher_name'].value_counts()
-dataset_publisher_counts.plot(kind='barh')
+#dataset_publisher_counts = dataset_metadata['publisher_name'].value_counts()
+#dataset_publisher_counts.plot(kind='barh')
 
 # Collect the keyword and description length for each dataset.
 #def calculate_keyword_count(s: pd.Series) -> {}:

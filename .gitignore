@@ -1,0 +1,6 @@
+
+.DS_Store
+pod_categorize/data/desc1.txt
+pod_categorize/data/desc1.txt.out
+*.out
+*.txt
