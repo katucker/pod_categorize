@@ -165,7 +165,7 @@ def retrieve_dkan_dataset_urls(s: str) -> []:
 def retrieve_dkan_urls(s: pd.Series) -> []:
     return retrieve_dkan_dataset_urls(s['identifier'])
 
-dataset_metadata['dkan_metadata'] = dataset_metadata.apply(retrieve_dkan_urls, axis=1)
+dkan_urls = dataset_metadata['identifier'].apply(retrieve_dkan_dataset_urls)
 
 # Plot a histogram of the publishers.
 #dataset_publisher_counts = dataset_metadata['publisher_name'].value_counts()
