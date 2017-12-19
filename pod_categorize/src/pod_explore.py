@@ -10,12 +10,9 @@ import re
 import nltk
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
-#import argparse
-#import UMLSService
-
-#parser = argparse.ArgumentParser(description='Explore contents of a Project Open Data inventory file')
-#parser.add_argument("-k", "--apikey", required = True, dest = "apikey", help = "the API key from a UTS account")
-#args = parser.parse_args()
+import subprocess
+import uuid
+import os
 
 pod_url = 'https://www.hhs.gov/data.json'
 pod = pd.read_json(pod_url)
@@ -120,6 +117,79 @@ dataset_metadata['publisher_name'] = dataset_metadata.apply(extract_publishers, 
 dataset_publisher_counts = dataset_metadata['publisher_name'].value_counts()
 dataset_publisher_counts.plot(kind='barh')
 
+def get_cwd_tempfilename():
+    return os.fsencode(os.getcwd() + "/" + str(uuid.uuid4())).decode()
+
+def get_metamap_concepts(s, disambiguate=True, identify_terms=False):
+    """Retrieve a list of concepts for the passed text using the
+    MetaMap application from the Unified Medical Language System.
+    """
+    # Path to the MetaMap application.
+    mm = os.fsencode("C:/Users/Keith.Tucker/Apps/public_mm/bin/metamap14.bat").decode()
+    mmp = [mm, "-N"]
+    if disambiguate:
+        mmp.append("-y")
+    if identify_terms:
+        mmp.append("-z")
+    # Generate temporary file names to use for the input and output.
+    # Note, this approach is used because piping stdin and stdout does
+    # not work reliably on Windows systems.
+    mmifn = get_cwd_tempfilename()
+    mmofn = mmifn + ".out"
+    mmif = open(mmifn, mode="w+t", encoding='ascii', errors='ignore')
+    # If the first argument passed is an array of strings,
+    # print one element per line.
+    if isinstance(s, list):
+        for i in s:
+            print(i, file=mmif)
+            print("\n", file=mmif)
+    else:
+        print(s, file=mmif)
+        print("\n", file=mmif)
+    mmif.close()
+    mmp.append(mmifn)
+    mmp.append(mmofn)
+    try:
+        subprocess.run(mmp, timeout=120, check=True)
+        fmmi_names = ["score", "term", "sem", "mesh"]
+        mmo = pd.read_csv(mmofn, sep="|", header=None, names=fmmi_names, usecols=[2,3,5,9])
+        mmo['mesh'] = mmo['mesh'].apply(lambda x: str(x).split(";"))
+#        mmof = open(mmofn, mode="r+t", encoding="ascii", errors='ignore')
+#        mmo = mmof.read()
+        # Break the output on newlines and discard the final empty line.
+#        mmo = mmo.split("\n")[:-1]
+#        mmof.close()
+    except subprocess.TimeoutExpired:
+        print("MetaMap run timed out.", "Input: ", s)
+        mmo = []
+    except subprocess.CalledProcessError:
+        print("Metamap run completed with errors.", "Input: ", s)
+        mmo = []
+    finally:
+        try:
+            os.remove(mmifn)
+            os.remove(mmofn)
+        except os.error:
+            pass
+    return mmo
+
+dataset_metadata['description_concepts'] = dataset_metadata['clean_description'].apply(get_metamap_concepts)
+
+dataset_metadata['title_concepts'] = dataset_metadata['title'].apply(get_metamap_concepts, identify_terms=True)
+
+dataset_metadata['keyword_concepts'] = dataset_metadata['clean_keywords'].apply(get_metamap_concepts, identify_terms=True)
+#%%
+
+# Construct the vectors to use for the clustering algorithm.
+
+def get_dict_from_metamap(mm):
+    """Transform the DataFrame passed to a dict with term names as keys and
+    MMI scores as values.
+    """
+    mm_dict = {tr.term: tr.score for tr in mm.itertuples()}
+    return mm_dict
+
+#%%    
 # Collect the keyword and description length for each dataset.
 #def calculate_keyword_count(s: pd.Series) -> {}:
 #    return len(s['clean_keywords'])
