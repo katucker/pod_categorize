@@ -9,12 +9,15 @@ import pandas as pd
 import re
 import nltk
 from bs4 import BeautifulSoup
+<<<<<<< HEAD
 #import matplotlib.pyplot as plt
 import subprocess
 
 #parser = argparse.ArgumentParser(description='Explore contents of a Project Open Data inventory file')
 #parser.add_argument("-k", "--apikey", required = True, dest = "apikey", help = "the API key from a UTS account")
 #args = parser.parse_args()
+=======
+>>>>>>> 7dfbc6c72ade58c5229c227984360630724df779
 
 pod_url = 'https://www.hhs.gov/data.json'
 pod = pd.read_json(pod_url)
