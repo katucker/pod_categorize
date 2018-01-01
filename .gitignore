@@ -4,3 +4,8 @@ pod_categorize/data/desc1.txt
 pod_categorize/data/desc1.txt.out
 *.out
 *.txt
+*.svg
+pod_categorize/data/dataset_metadata_km_trained
+pod_categorize/data/dataset_metadata_km17
+pod_categorize/data/dataset_metadata_vectorized
+pod_categorize/data/dataset_metadata_vectorized
