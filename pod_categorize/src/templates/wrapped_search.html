@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link type="text/css" rel="stylesheet" href="https://www.healthdata.gov/sites/default/files/css/css_kShW4RPmRstZ3SpIC-ZvVGNFVAi0WEMuCnI0ZkYIaFw.css" media="all" />
+        <link type="text/css" rel="stylesheet" href="https://www.healthdata.gov/sites/default/files/css/css_5Rn1Nv11EbzRqTBGph2R1ujO37nLI7zTRSDUPnsTv1o.css" media="all" />
+        <link type="text/css" rel="stylesheet" href="https://www.healthdata.gov/sites/default/files/css/css_I-BaYiMFnD9YZTImj4dVvrMOHWRw1OvwUWo0ihOelJk.css" media="all" />
+        <link type="text/css" rel="stylesheet" href="https://www.healthdata.gov/sites/default/files/css/css_ZDd1yoslRgZzc6HO1reTzfku9DaiNA0lpDEccVCq3tw.css" media="all" />
+        <link type="text/css" rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans::400,300,700" media="all" />
+        <style type="text/css" media="all">
+        <title>HealthData.gov with Machine Learning Enhancements</title>
+    </head>
+    <body>
+        <p>Augmented search for the HealthData.gov website. Enter a search
+        term below and the search results from HealthData.gov will be displayed,
+        along wtih supplementary search results from Machine Learning
+        techniques.</p>
+        <form action="/search_ml" method="post" id="hd-search-ml" accept-charset="UTF-8">
+            <label for="search-submit">Search </label>
+            <input type"text" placeholder="search" name="search" class="form-control form-text" id="search-text" value="{{search_term}}" size="50" maxlength="128"/>
+            <input type="submit" id="search-submit" class="form-submit btn btn-default btn-primary"/>
+        </form>
+        {% if base_results.shape[0] > 0 %}
+        <div class="view-content">
+            {% for i, ds in base_results.iterrows() %}
+                {% if i == 0 %}
+            <div class="views-row views-row-{{i}} views-row-odd views-row-first">
+                {% elseif (i%2) == 0 %}
+            <div class="views-row views-row-{{i}} views-row-event">
+                {% else %}
+            <div class="views-row views-row-{{i}} views-row-odd">
+                {% endif %}
+                <article class="node-search-result row" xmlns="http://www.w3.org/1999/html">
+                    <div class="col-md-2 col-lg-1 col-xs-2 icon-container">
+                        <span class="icon-dkan facet-icon icon-dkan-dataset" ></span>
+                    </div>
+                    <div class="col-md-10 col-lg-11 col-xs-10 search-result search-result-dataset">
+                        <h2 class="node-title"><a href={{ds.url}} title={{ds.title}}>{{ds.title}}</a></h2>
+                        <div class="group-membership">{{ds.group}}</div>
+                        <div class="node-description"><p>{{ds.description}}</p></div>
+                    </div>
+                </article>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if ml_results.shape[0] > 0 %}
+        {% endif %}
+    </body>
+</hml>
+
