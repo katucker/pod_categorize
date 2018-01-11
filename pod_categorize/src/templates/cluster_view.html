@@ -7,18 +7,16 @@
         <link type="text/css" rel="stylesheet" href="https://www.healthdata.gov/sites/default/files/css/css_ZDd1yoslRgZzc6HO1reTzfku9DaiNA0lpDEccVCq3tw.css" media="all" />
         <link type="text/css" rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans::400,300,700" media="all" />
         <style type="text/css" media="all">
-        <title>HealthData.gov Dataset Clustering</title>
+        <title>HealthData.gov Dataset Cluster View</title>
     </head>
     <body>
-        <p>A comparison of clustering alogrithms applied to the data inventory
-        on the HealthData.gov website.</p>
-        <ol>
-            <li><a href="/agglomerative-cosine">Agglomerative Cosine</a>Agglomerative Clustering using Cosine distance metric.</li>
-            <li><a href="/agglomerative-euclid">Agglomerative Euclid</a>Agglomerative Clustering using Euclidean distance metric.</li>
-            <li><a href="/dbscan-cosine">DBSCAN Cosine</a>Distance Based Spatial Clustering for Applications with Noise (DBSCAN) using Cosine distance metric.</li>
-            <li><a href="/dbscan-euclid">DBSCAN Euclid</a>Distance Based Spatial Clustering for Applications with Noise (DBSCAN) using Euclidean distance metric.</li>
-            <li><a href="/kmeans">K-Means</a>K-Means Clustering (which always uses a Euclidean distance metric).</li>
-        </ol>
+        <h1>{{title}}</h1>
+        <img src="{{url_for('static', filename='img/{{diagram}}')}}" alt="Silhouettes Diagram">
+        <ul>
+            {% for i in clusters %}
+            <li><a href="/{{cluster_name}}/i">Cluster {{i}}</a></li>
+            {% endfor %}
+        </ul>
     </body>
 </hml>
 

@@ -296,7 +296,7 @@ dataset_metadata['combined_mm_dict'] = dataset_metadata.apply(combine_mm_dicts, 
 # variation to the comparison.
 
 def collect_kmeans_inertias(vec, cluster_range = range(1,50),
-                            n_init = 5, max_iter = 100):
+                            n_init = 10, max_iter = 100):
     '''Train the passed vector using the k-means algorithm over the range
     of clusters specified, and collect the inertia values from each run.
     This helps build the data for an elbow plot to estimate the optimal
@@ -316,7 +316,7 @@ def collect_kmeans_inertias(vec, cluster_range = range(1,50),
     
 def plot_inertias(inertias, cluster_range = range(1,50),
                   title = 'K-Means clustering'):
-    DIMENSIONS = (7.0, 5.0)
+    DIMENSIONS = (4.0, 3.0)
     fig = plt.figure(figsize = DIMENSIONS)
     diag = fig.add_subplot(1, 1, 1)
     diag.plot(cluster_range, inertias, 'bo-')
@@ -336,7 +336,7 @@ def plot_silhouettes(vector, clustering,
     non_empty_clusters = cluster_labels.shape[0]
     # Iterate over the non-empty cluster labels, plotting the silhouette values
     # for each.
-    DIMENSIONS = (7.0, 5.0)
+    DIMENSIONS = (4.0, 3.0)
     sfig, sdiags = plt.subplots(nrows = non_empty_clusters, ncols=1, sharex=True,
                                 figsize = DIMENSIONS)
     for d,l in enumerate(cluster_labels):
@@ -347,12 +347,14 @@ def plot_silhouettes(vector, clustering,
               edgecolor = 'none', color = 'C{}'.format(l % 9))
         # Add a vertical line showing the average silhouette value.
         sdiags[d].axvline(average_silhouette, color = 'black', linestyle = '--')
-        sdiags[d].set_ylabel("Cluster {}".format(l), rotation='horizontal',
+        sdiags[d].set_ylabel("{}".format(l), rotation='horizontal',
               ha = 'right', va='center')
         sdiags[d].set_yticklabels([])
     plt.subplots_adjust(hspace=0.0)
     # Position a label at the bottom of the figure to serve as a common X-axis label.
     sfig.text(0.5, 0.04, 'Silhouette coefficient', ha='center')
+    # And another along the left edge to serve as a common Y-axis label.
+    sfig.text(0.04, 0.5, 'Cluster', rotation='vertical', va='center')
     sfig.suptitle(title.format(len(cluster_labels)))
     sfig.show()
 
@@ -361,7 +363,7 @@ mm_vect = DictVectorizer()
 mm_v = mm_vect.fit_transform(list(dataset_metadata['combined_mm_dict']))
 
 #%%
-cr = range(5,25)
+cr = range(30,60)
 inertias = collect_kmeans_inertias(mm_v, cluster_range = cr)
 plot_inertias(inertias, cluster_range = cr, 
               title = 'Metamap concept K-Means clustering')
@@ -372,7 +374,7 @@ plot_inertias(inertias, cluster_range = cr,
 mmdbscan = DBSCAN(metric='euclidean', n_jobs=3)
 mm_dbscan_clustering = mmdbscan.fit_predict(mm_v)
 
-dataset_metadata['mm_dbscan_clustering'] = pd.Series(mm_dbscan_clustering)
+dataset_metadata['mm_dbscan_euclid_cluster'] = pd.Series(mm_dbscan_clustering)
 #%%
 # Plot the silhouettes of the DBSCAN results.
 plot_silhouettes(mm_v, mm_dbscan_clustering,
@@ -381,36 +383,34 @@ plot_silhouettes(mm_v, mm_dbscan_clustering,
 
 #%%    
 # Rerun the clustering algorithm using a chosen number of clusters based on
-# the DBSCAN run.
-NUM_CLUSTERS = 10
+# the inertias plot. Increase the number of runs to try improving the results.
+NUM_CLUSTERS = 42
 mmkm = KMeans(n_clusters = NUM_CLUSTERS,
               init = 'k-means++',
-              n_init = 12,
+              n_init = 20,
               max_iter = 300)
-mm_clustering = mmkm.fit_predict(mm_v)
 
-dataset_metadata['mmkm_cluster'] = pd.Series(mm_clustering)
+dataset_metadata['mm_km_cluster'] = pd.Series(mmkm.fit_predict(mm_v))
 
 #%%
 # Plot the silhouettes of the k-means clustering.
-plot_silhouettes(mm_v, mm_clustering, 
+plot_silhouettes(mm_v, dataset_metadata['mm_km_cluster'], 
                  title="Silhouettes for {} K-Means clusters.")
 
 #%%
 # Run agglomerative clustering on the Metamap concepts vector, 
 # using a Euclidean metric and the same number of clusters as the
-# DBSCAN algorithm derived.
-mma = AgglomerativeClustering(n_clusters = 10, 
+# used in the k-means algorithm.
+mma = AgglomerativeClustering(n_clusters = NUM_CLUSTERS, 
                               linkage = 'complete', 
                               affinity = 'euclidean')
 mm_array = mm_v.toarray()
-mm_agg_clustering = mma.fit_predict(mm_array)
 
-dataset_metadata['mm_agg_clustering'] = pd.Series(mm_agg_clustering)
+dataset_metadata['mm_agg_euclid_cluster'] = pd.Series(mma.fit_predict(mm_array))
 
 #%%
 # Plot the silhouettes for the agglomerative clustering.
-plot_silhouettes(mm_v, mm_agg_clustering,
+plot_silhouettes(mm_v, dataset_metadata['mm_agg_euclid_cluster'],
                  metric='euclidean',
                  title="Silhouettes for {} Agglomerative clusters using Euclidean affinity.")
 
@@ -418,13 +418,12 @@ plot_silhouettes(mm_v, mm_agg_clustering,
 # Run the Distance Based Spatial Clustering fo Applications with Noise (DBSCAN)
 # algorithm on the MetaMap concepts vector, using a Cosine distance metric.
 mmdbscan = DBSCAN(metric='cosine', n_jobs=3)
-mm_dbscan_clustering = mmdbscan.fit_predict(mm_v)
 
-dataset_metadata['mm_dbscan__cosine_clustering'] = pd.Series(mm_dbscan_clustering)
+dataset_metadata['mm_dbscan_cosine_cluster'] = pd.Series(mmdbscan.fit_predict(mm_v))
 
 #%%
 # Plot the silhouettes of the DBSCAN results.
-plot_silhouettes(mm_v, mm_dbscan_clustering,
+plot_silhouettes(mm_v, dataset_metadata['mm_dbscan_cosine_cluster'],
                  metric='cosine',
                  title='Silhouettes for {} DBSCAN clusters using Cosine metric.')
 
@@ -432,17 +431,16 @@ plot_silhouettes(mm_v, mm_dbscan_clustering,
 # Run agglomerative clustering on the Metamap concepts vector, 
 # using a Cosine metric and the same number of clusters as the
 # DBSCAN algorithm derived.
-mma = AgglomerativeClustering(n_clusters = 28, 
+mma = AgglomerativeClustering(n_clusters = np.unique(dataset_metadata['mm_dbscan_cosine_cluster']).shape[0], 
                               linkage = 'complete', 
                               affinity = 'cosine')
 mm_array = mm_v.toarray()
-mm_agg_clustering = mma.fit_predict(mm_array)
 
-dataset_metadata['mm_agg_cosine_clustering'] = pd.Series(mm_agg_clustering)
+dataset_metadata['mm_agg_cosine_cluster'] = pd.Series(mma.fit_predict(mm_array))
 
 #%%
 # Plot the silhouettes for the agglomerative clustering.
-plot_silhouettes(mm_v, mm_agg_clustering,
+plot_silhouettes(mm_v, dataset_metadata['mm_agg_cosine_cluster'],
                  metric='cosine',
                  title="Silhouettes for {} Agglomerative clusters using Cosine affinity.")
 
@@ -455,7 +453,7 @@ plot_silhouettes(mm_v, mm_agg_clustering,
 # Exclude words that appear in less than 2 of the documents.
 # Include more features than were found in the MetaMap analysis, to allow
 # for broader term statistics.
-MAX_FEATURES = 7000
+MAX_FEATURES = 6000
 tfidf_vect = TfidfVectorizer(ngram_range = (1,5), max_df = 0.95, min_df = 2, 
                              max_features = MAX_FEATURES, 
                              stop_words = 'english')
@@ -471,99 +469,98 @@ dataset_text = [concat_text_fields(ds) for i,ds in dataset_metadata.iterrows()]
 term_matrix = tfidf_vect.fit_transform(dataset_text)
 
 #%%
-cr = range(620,650)
+cr = range(30,60)
 tfidf_inertias = collect_kmeans_inertias(term_matrix, cluster_range = cr)
 plot_inertias(tfidf_inertias, cluster_range = cr,
               title = 'TF-IDF K-Means clustering')
 
 #%%
 # Apply Latent Dirichlet Allocation on the text of the inventory.
-COMPONENTS = 20
-ITERATIONS = 10
-OFFSET = 10.0
-lda = LatentDirichletAllocation(n_components = COMPONENTS,
-                                max_iter = ITERATIONS,
-                                learning_offset = OFFSET)
-lda_clustering = lda.fit_transform(term_matrix)
+#COMPONENTS = 20
+#ITERATIONS = 10
+#OFFSET = 10.0
+#lda = LatentDirichletAllocation(n_components = COMPONENTS,
+#                                max_iter = ITERATIONS,
+#                                learning_offset = OFFSET)
+#lda_clustering = lda.fit_transform(term_matrix)
 
 #%%
 # Run the Distance Based Spatial Clustering fo Applications with Noise (DBSCAN)
 # algorithm on the TF-IDF vector, using a Euclidean distance metric.
-tfidfdbscan = DBSCAN(metric='euclidean', n_jobs=3)
-tfidf_dbscan_clustering = tfidfdbscan.fit_predict(term_matrix)
+tfidfdbscan = DBSCAN(metric='euclidean', n_jobs=1)
 
-dataset_metadata['tfidf_dbscan_clustering'] = pd.Series(tfidf_dbscan_clustering)
+dataset_metadata['tfidf_dbscan_euclid_cluster'] = pd.Series(tfidfdbscan.fit_predict(term_matrix))
 #%%
 # Plot the silhouettes of the DBSCAN results.
-plot_silhouettes(term_matrix, tfidf_dbscan_clustering,
+plot_silhouettes(term_matrix, dataset_metadata['tfidf_dbscan_euclid_cluster'],
                  metric='euclidean',
                  title='Silhouettes for {} TF-IDF DBSCAN clusters using Euclidean metric.')
 
 #%%    
 # Rerun the clustering algorithm using a chosen number of clusters based on
-# the DBSCAN run.
-NUM_CLUSTERS = 10
-mmkm = KMeans(n_clusters = NUM_CLUSTERS,
+# the inertias plat.
+num_clusters = 59
+tfidfkm = KMeans(n_clusters = num_clusters,
               init = 'k-means++',
-              n_init = 12,
+              n_init = 20,
               max_iter = 300)
-mm_clustering = mmkm.fit_predict(mm_v)
 
-dataset_metadata['mmkm_cluster'] = pd.Series(mm_clustering)
+dataset_metadata['tfidf_km_cluster'] = pd.Series(tfidfkm.fit_predict(term_matrix))
 
 #%%
 # Plot the silhouettes of the k-means clustering.
-plot_silhouettes(mm_v, mm_clustering, 
-                 title="Silhouettes for {} K-Means clusters.")
+plot_silhouettes(term_matrix, dataset_metadata['tfidf_km_cluster'], 
+                 title="Silhouettes for {} TF-IDF K-Means clusters.")
 
 #%%
 # Run agglomerative clustering on the Metamap concepts vector, 
 # using a Euclidean metric and the same number of clusters as the
 # DBSCAN algorithm derived.
-mma = AgglomerativeClustering(n_clusters = 10, 
+tfidfa = AgglomerativeClustering(n_clusters = num_clusters, 
                               linkage = 'complete', 
                               affinity = 'euclidean')
-mm_array = mm_v.toarray()
-mm_agg_clustering = mma.fit_predict(mm_array)
+term_array = term_matrix.toarray()
+tfidf_agg_clustering = tfidfa.fit_predict(term_array)
 
-dataset_metadata['mm_agg_clustering'] = pd.Series(mm_agg_clustering)
+dataset_metadata['tfidf_agg_euclid_cluster'] = pd.Series(tfidfa.fit_predict(term_array))
 
 #%%
 # Plot the silhouettes for the agglomerative clustering.
-plot_silhouettes(mm_v, mm_agg_clustering,
+plot_silhouettes(term_matrix, dataset_metadata['tfidf_agg_euclid_cluster'],
                  metric='euclidean',
-                 title="Silhouettes for {} Agglomerative clusters using Euclidean affinity.")
+                 title="Silhouettes for {} TF-IDF Agglomerative clusters using Euclidean affinity.")
 
 #%%
 # Run the Distance Based Spatial Clustering fo Applications with Noise (DBSCAN)
 # algorithm on the MetaMap concepts vector, using a Cosine distance metric.
-mmdbscan = DBSCAN(metric='cosine', n_jobs=3)
-mm_dbscan_clustering = mmdbscan.fit_predict(mm_v)
+tfidfdbscan = DBSCAN(metric='cosine', n_jobs=1)
 
-dataset_metadata['mm_dbscan__cosine_clustering'] = pd.Series(mm_dbscan_clustering)
+dataset_metadata['tfidf_dbscan_cosine_cluster'] = pd.Series(tfidfdbscan.fit_predict(term_matrix))
 
 #%%
 # Plot the silhouettes of the DBSCAN results.
-plot_silhouettes(mm_v, mm_dbscan_clustering,
+plot_silhouettes(term_matrix, dataset_metadata['tfidf_dbscan_cosine_cluster'],
                  metric='cosine',
-                 title='Silhouettes for {} DBSCAN clusters using Cosine metric.')
+                 title='Silhouettes for {} TF-IDF DBSCAN clusters using Cosine metric.')
 
 #%%
 # Run agglomerative clustering on the Metamap concepts vector, 
 # using a Cosine metric and the same number of clusters as the
 # DBSCAN algorithm derived.
-mma = AgglomerativeClustering(n_clusters = 28, 
-                              linkage = 'complete', 
-                              affinity = 'cosine')
-mm_array = mm_v.toarray()
-mm_agg_clustering = mma.fit_predict(mm_array)
+num_clusters = np.unique(dataset_metadata['tfidf_dbscan_cosine_cluster']).shape[0]
+tfidfa = AgglomerativeClustering(n_clusters = num_clusters, 
+                                 linkage = 'complete', 
+                                 affinity = 'cosine')
+term_array = term_matrix.toarray()
 
-dataset_metadata['mm_agg_cosine_clustering'] = pd.Series(mm_agg_clustering)
+dataset_metadata['tfidf_agg_cosine_cluster'] = pd.Series(tfidfa.fit_predict(term_array))
 
 #%%
 # Plot the silhouettes for the agglomerative clustering.
-plot_silhouettes(mm_v, mm_agg_clustering,
+plot_silhouettes(term_matrix, dataset_metadata['tfidf_agg_cosine_cluster'],
                  metric='cosine',
-                 title="Silhouettes for {} Agglomerative clusters using Cosine affinity.")
+                 title="Silhouettes for {} TF-IDF Agglomerative clusters using Cosine affinity.")
 
-
+#%%
+# Save the dataframe for use in other applications.
+dataset_metadata.to_pickle('dataset_inventory_clustered.pickle')

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HealthData.gov Dataset Clustering</title>
+        <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/w3.css')}}"/>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body class="w3-light-grey">
+        <div class="w3-bar w3-top w3-black w3-large" style="z-index:4">
+          <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_open();"><i class="fa fa-bars"></i>  Menu</button>
+          <span class="w3-bar-item w3-right"><a href="/"><b>Dataset Clustering for </b><img src="{{url_for('static', filename='img/logo.png')}}" alt="HealthData.gov"></a></span>
+        </div>
+
+        <nav class="w3-sidebar w3-collapse w3-white w3-animate-left" style="z-index:3;width:250px;" id="mySidebar"><br>
+          <div class="w3-container">
+            <h5>Clustering Approaches</h5>
+          </div>
+          <div class="w3-bar-block">
+            <h6>Based on MetaMap concepts</h6>
+            <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close List</a>
+            <a href="/mmc-agglomerative-cosine/0" class="w3-bar-item w3-button w3-padding">Agglomerative Cosine</a>
+            <a href="/mmc-agglomerative-euclid/0" class="w3-bar-item w3-button w3-padding">Agglomerative Euclidean</a>
+            <a href="/mmc-dbscan-cosine/0" class="w3-bar-item w3-button w3-padding">DBSCAN Cosine</a>
+            <a href="/mmc-dbscan-euclid/0" class="w3-bar-item w3-button w3-padding">DBSCAN Euclidean</a>
+            <a href="/mmc-kmeans/0" class="w3-bar-item w3-button w3-padding">K-Means</a>
+            <h6>Based on Term Frequency</h6>
+            <a href="/tf-idf-agglomerative-cosine/0" class="w3-bar-item w3-button w3-padding">Agglomerative Cosine</a>
+            <a href="/tf-idf-agglomerative-euclid/0" class="w3-bar-item w3-button w3-padding">Agglomerative Euclidean</a>
+            <a href="/tf-idf-dbscan-cosine/0" class="w3-bar-item w3-button w3-padding">DBSCAN Cosine</a>
+            <a href="/tf-idf-dbscan-euclid/0" class="w3-bar-item w3-button w3-padding">DBSCAN Euclidean</a>
+            <a href="/tf-idf-kmeans/0" class="w3-bar-item w3-button w3-padding">K-Means</a>
+          </div>
+        </nav>
+
+        <!-- Overlay effect when opening sidebar on small screens -->
+        <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" title="close side menu" id="myOverlay"></div>
+        
+        <!-- !PAGE CONTENT! -->
+        <div class="w3-main" style="margin-left:250px;margin-top:81px">
+          <!-- Header -->
+          <header class="w3-container" style="padding-top:22px">
+            <h5><b>{{cluster_title}}</b></h5>
+          </header>
+          <div class="w3-bar w3-black"">
+            <button class="w3-bar-item w3-button tablink w3-light-blue" onclick="openTab(event, 'clusters')">Clusters</button>
+            <button class="w3-bar-item w3-button tablink" onclick="openTab(event, 'diagram')">Silhouette Diagram</button>
+          </div>
+          <div id="clusters" class="w3-panel tab" style="max-height:400px;display:block">
+            <div class="w3-third">
+              <h5>Clusters</h5>
+              <div style="overflow-y:scroll">
+                <ul class="w3-ul"">
+                {% for l in clusters %}
+                  <li><a href="/{{cluster_url}}/{{loop.index0}}">Cluster {{l}}</a></li>
+                {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="w3-twothird">
+              <h5>Dataset Titles in Cluster {{clusters[cluster_index]}}</h5>
+              <div class="w3-responsive" style="overflow-y:scroll">
+                <table class="w3-table-all">
+                {% for index, title in cluster_dataset_titles %}
+                  <tr>
+                    <td><a href="/dataset/{{index}}">{{title}}</a></td>
+                  </tr>
+                {% endfor %}
+                </table>
+              </div>
+            </div>
+          </div>
+          <div id="diagram" class="w3-panel tab" style="display:none">
+            <div class="w3-row-padding">
+              <img src="{{url_for('static', filename='img/' + diagram)}}" alt="Silhouettes Diagram">
+            </div>
+          </div>
+        </div>
+        <!-- End page content -->
+
+    <script>
+        // Get the Sidebar
+        var mySidebar = document.getElementById("mySidebar");
+
+        // Get the DIV with overlay effect
+        var overlayBg = document.getElementById("myOverlay");
+
+        // Toggle between showing and hiding the sidebar, and add overlay effect
+        function w3_open() {
+            if (mySidebar.style.display === 'block') {
+                mySidebar.style.display = 'none';
+                overlayBg.style.display = "none";
+            } else {
+                mySidebar.style.display = 'block';
+                overlayBg.style.display = "block";
+            }
+        }
+
+        // Close the sidebar with the close button
+        function w3_close() {
+            mySidebar.style.display = "none";
+            overlayBg.style.display = "none";
+        }
+
+        function openTab(evt, tab) {
+            var i;
+            var x = document.getElementsByClassName("tab");
+            for (i = 0; i < x.length; i++) {
+                x[i].style.display = "none"; 
+            }
+            var tablinks = document.getElementsByClassName("tablink");
+            for (i = 0; i < x.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" w3-light-blue", "");
+            }
+            document.getElementById(tab).style.display = "block"; 
+            evt.currentTarget.className += " w3-light-blue";
+        }    
+    </script>
+    </body>
+</hml>
+
