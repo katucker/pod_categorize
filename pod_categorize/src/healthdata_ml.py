@@ -72,7 +72,8 @@ def render_cluster(cluster_number = 0, cluster_index = 0):
         cluster_number = len(CLUSTER_FIELD_NAMES) -1
     cluster_name = CLUSTER_FIELD_NAMES[cluster_number]
     cluster_url = CLUSTER_URLS[cluster_number]
-    clusters = list(np.unique(dataset_inventory[cluster_name]))
+    cluster_indices = dataset_inventory[cluster_name]
+    clusters = list(np.unique(cluster_indices))
     cluster_title = CLUSTER_TITLES[cluster_number]
     diagram = CLUSTER_FILE_NAMES[cluster_number]
     # Force the cluster_index to within range.
@@ -86,6 +87,7 @@ def render_cluster(cluster_number = 0, cluster_index = 0):
             cluster_dataset_titles.append((index, dsr.title))
     return render_template('cluster_list.html',
                            cluster_url = cluster_url,
+                           cluster_indices = cluster_indices,
                            clusters = clusters,
                            cluster_title = cluster_title,
                            cluster_index = cluster_index,

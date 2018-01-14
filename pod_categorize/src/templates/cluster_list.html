@@ -45,6 +45,7 @@
           <div class="w3-bar w3-black"">
             <button class="w3-bar-item w3-button tablink w3-light-blue" onclick="openTab(event, 'clusters')">Clusters</button>
             <button class="w3-bar-item w3-button tablink" onclick="openTab(event, 'diagram')">Silhouette Diagram</button>
+            <button class="w3-bar-item w3-button tablink" onclick="openTab(event, 'visualization')">Cluster Viualization</button>
           </div>
           <div id="clusters" class="w3-panel tab" style="max-height:400px;display:block">
             <div class="w3-third">
@@ -75,10 +76,18 @@
               <img src="{{url_for('static', filename='img/' + diagram)}}" alt="Silhouettes Diagram">
             </div>
           </div>
+          <div id="visualization" class="w3-panel tab" style="display:none">
+          </div>
         </div>
         <!-- End page content -->
 
+    <script src="//d3js.org/d3.v4.min.js"></script>
+    <script src="{{url_for('static', filename='js/clusterVisualize.js')}}"></script>
     <script>
+        var nodes = [{% for ci in cluster_indices %}
+                        {cluster: {{ci}}},
+                    {% endfor %}];
+
         // Get the Sidebar
         var mySidebar = document.getElementById("mySidebar");
 
@@ -114,7 +123,11 @@
             }
             document.getElementById(tab).style.display = "block"; 
             evt.currentTarget.className += " w3-light-blue";
+            if (tab === "visualization") {
+                displayClustering("visualization", nodes)
+            }
         }    
+
     </script>
     </body>
 </hml>
